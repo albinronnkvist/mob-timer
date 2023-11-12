@@ -8,6 +8,20 @@ public static class ServiceCollectionExtensions
         services.AddSwaggerGen();
     }
 
+    public static void ConfigureCors(this IServiceCollection services)
+    {
+        services.AddCors(options =>
+        {
+            options.AddPolicy("CorsPolicy", builder =>
+            {
+                builder.WithOrigins("http://localhost:3000")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
+    }
+
     public static void ConfigureSignalR(this IServiceCollection services)
     {
         services.AddSignalR();

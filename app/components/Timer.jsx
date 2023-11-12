@@ -1,16 +1,52 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import BrowserNotificationHandler from '../utils/BrowserNotificationHandler'
+import SignalRService from '../hooks/SignalRService';
 
 // Components
 import TimerControls from './TimerControls';
 import TimerSetter from './TimerSetter';
+import TimerSoundSetter from './TimerSoundSetter';
 
 const Timer = () => {
   const [timeLeft, setTimeLeft] = useState(59);
   const [selectedTime, setSelectedTime] = useState(59);
   const [isRunning, setIsRunning] = useState(false);
 	const [selectedSound, setSelectedSound] = useState('/timesup.mp3');
+
+  let signalRServiceRef = useRef(null);
+
+  useEffect(() => {
+    signalRServiceRef.current = new SignalRService('/timer');
+
+    signalRServiceRef.current.on('UpdateTime', (newTime) => {
+      setTimeLeft(newTime);
+      setSelectedTime(newTime);
+      setIsRunning(false);
+    });
+
+    signalRServiceRef.current.on('StartTimer', (duration) => {
+      handleTimeSet(duration);
+      setIsRunning(true);
+    });
+
+    signalRServiceRef.current.on('PauseTimer', () => setIsRunning(false));
+
+    signalRServiceRef.current.on('ResetTimer', (selectedTime) => {
+      setTimeLeft(selectedTime);
+      setIsRunning(false);
+    });
+
+    signalRServiceRef.current.on('EndTimer', (selectedTime) => {
+      setTimeLeft(selectedTime);
+      setIsRunning(false);
+      BrowserNotificationHandler.showNotification("Time's up!", "Next one in line");
+    });
+
+    return () => {
+      signalRServiceRef.current.close();
+    };
+  }, []);
 
 	useEffect(() => {
 		BrowserNotificationHandler.setSelectedSound(selectedSound);
@@ -44,21 +80,24 @@ const Timer = () => {
     setIsRunning(false);
   };
 
+  const updateTime = (newTime) => {
+    signalRServiceRef.current.invoke('BroadcastUpdateTime', newTime);
+  };
+
+  const startTimer = () => {
+    signalRServiceRef.current.invoke('BroadcastStartTimer', timeLeft);
+  };
+
+  const pauseTimer = () => {
+    signalRServiceRef.current.invoke('BroadcastPauseTimer');
+  };
+
   const resetTimer = () => {
-    setTimeLeft(selectedTime);
-    setIsRunning(false);
+    signalRServiceRef.current.invoke('BroadcastResetTimer', selectedTime);
   };
 
 	const endTimer = () => {
-		setTimeout(() => {
-			setIsRunning(false);
-			setTimeLeft(selectedTime);
-			BrowserNotificationHandler.showNotification("Time's up!", "Next one in line");
-		}, 1000);
-  };
-
-	const handleSoundChange = (event) => {
-    setSelectedSound(event.target.value);
+		signalRServiceRef.current.invoke('BroadcastEndTimer', selectedTime);
   };
 
   const radius = 150;
@@ -103,18 +142,16 @@ const Timer = () => {
         </text>
       </svg>
 			<TimerControls
-        onStart={() => setIsRunning(true)}
-        onPause={() => setIsRunning(false)}
+        onStart={startTimer}
+        onPause={pauseTimer}
         onReset={resetTimer}
         isRunning={isRunning}
       />
-      <TimerSetter onTimeSet={handleTimeSet} />
-			<div className="flex justify-center">
-				<select value={selectedSound} onChange={handleSoundChange}>
-					<option value="/timesup.mp3">Time's up!</option>
-					<option value="/lazergun.mp3">Lazer gun</option>
-				</select>
-			</div>
+      <TimerSetter onTimeSet={updateTime} />
+			<TimerSoundSetter
+        selectedSound={selectedSound}
+        setSelectedSound={setSelectedSound}
+      />
     </>
   );
 };

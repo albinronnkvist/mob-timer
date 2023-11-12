@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.ConfigureOpenApi();
+builder.Services.ConfigureCors();
 builder.Services.ConfigureSignalR();
 
 var app = builder.Build();
@@ -21,6 +22,8 @@ app.MapGroup("/timers/v1")
     .WithTags("TimersV1");
 
 app.UseHttpsRedirection();
+
+app.UseCors("CorsPolicy");
 
 app.MapHub<TimerHub>("/timer");
 
