@@ -1,56 +1,45 @@
-"use client"
-import React, { useState, useEffect, useRef } from 'react';
+'use client'
+import React, { useState, useEffect, useContext } from 'react';
 import BrowserNotificationHandler from '../utils/BrowserNotificationHandler'
-import SignalRService from '../hooks/SignalRService';
+import { SignalRContext } from '../contexts/SignalRContext';
 
 // Components
 import TimerControls from './TimerControls';
-import TimerSetter from './TimerSetter';
-import TimerSoundSetter from './TimerSoundSetter';
 
 const Timer = () => {
+  const { signalRService, connections } = useContext(SignalRContext);
+  const timerEndpoint = '/timer';
   const [timeLeft, setTimeLeft] = useState(59);
   const [selectedTime, setSelectedTime] = useState(59);
   const [isRunning, setIsRunning] = useState(false);
-	const [selectedSound, setSelectedSound] = useState('/timesup.mp3');
-
-  let signalRServiceRef = useRef(null);
 
   useEffect(() => {
-    signalRServiceRef.current = new SignalRService('/timer');
+    if (connections[[timerEndpoint]]) {
+      signalRService.on(timerEndpoint, 'UpdateTime', (newTime) => {
+        setTimeLeft(newTime);
+        setSelectedTime(newTime);
+        setIsRunning(false);
+      });
 
-    signalRServiceRef.current.on('UpdateTime', (newTime) => {
-      setTimeLeft(newTime);
-      setSelectedTime(newTime);
-      setIsRunning(false);
-    });
+      signalRService.on(timerEndpoint, 'StartTimer', (duration) => {
+        setTimeLeft(duration);
+        setIsRunning(true);
+      });
 
-    signalRServiceRef.current.on('StartTimer', (duration) => {
-      handleTimeSet(duration);
-      setIsRunning(true);
-    });
+      signalRService.on(timerEndpoint, 'PauseTimer', () => setIsRunning(false));
 
-    signalRServiceRef.current.on('PauseTimer', () => setIsRunning(false));
+      signalRService.on(timerEndpoint, 'ResetTimer', (selectedTime) => {
+        setTimeLeft(selectedTime);
+        setIsRunning(false);
+      });
 
-    signalRServiceRef.current.on('ResetTimer', (selectedTime) => {
-      setTimeLeft(selectedTime);
-      setIsRunning(false);
-    });
-
-    signalRServiceRef.current.on('EndTimer', (selectedTime) => {
-      setTimeLeft(selectedTime);
-      setIsRunning(false);
-      BrowserNotificationHandler.showNotification("Time's up!", "Next one in line");
-    });
-
-    return () => {
-      signalRServiceRef.current.close();
-    };
-  }, []);
-
-	useEffect(() => {
-		BrowserNotificationHandler.setSelectedSound(selectedSound);
-  }, [selectedSound]);
+      signalRService.on(timerEndpoint, 'EndTimer', (selectedTime) => {
+        setTimeLeft(selectedTime);
+        setIsRunning(false);
+        BrowserNotificationHandler.showNotification("Time's up!", "Next one in line");
+      });
+    }
+  }, [connections, signalRService]);
 
   useEffect(() => {
     let intervalId;
@@ -74,30 +63,22 @@ const Timer = () => {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
-  const handleTimeSet = (newTime) => {
-    setTimeLeft(newTime);
-    setSelectedTime(newTime);
-    setIsRunning(false);
-  };
-
-  const updateTime = (newTime) => {
-    signalRServiceRef.current.invoke('BroadcastUpdateTime', newTime);
-  };
-
   const startTimer = () => {
-    signalRServiceRef.current.invoke('BroadcastStartTimer', timeLeft);
+    signalRService.invoke(timerEndpoint, 'BroadcastStartTimer', timeLeft);
   };
 
   const pauseTimer = () => {
-    signalRServiceRef.current.invoke('BroadcastPauseTimer');
+    signalRService.invoke(timerEndpoint, 'BroadcastPauseTimer');
   };
 
   const resetTimer = () => {
-    signalRServiceRef.current.invoke('BroadcastResetTimer', selectedTime);
+    signalRService.invoke(timerEndpoint, 'BroadcastResetTimer', selectedTime);
   };
 
 	const endTimer = () => {
-		signalRServiceRef.current.invoke('BroadcastEndTimer', selectedTime);
+    setTimeout(() => {
+      signalRService.invoke(timerEndpoint, 'BroadcastEndTimer', selectedTime);
+    }, 1000);
   };
 
   const radius = 150;
@@ -146,11 +127,6 @@ const Timer = () => {
         onPause={pauseTimer}
         onReset={resetTimer}
         isRunning={isRunning}
-      />
-      <TimerSetter onTimeSet={updateTime} />
-			<TimerSoundSetter
-        selectedSound={selectedSound}
-        setSelectedSound={setSelectedSound}
       />
     </>
   );

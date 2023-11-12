@@ -1,8 +1,8 @@
-"use client"
+'use client'
 import React, { useEffect } from 'react';
-import BrowserNotificationHandler from '../utils/BrowserNotificationHandler';
+import BrowserNotificationHandler from '../../utils/BrowserNotificationHandler';
 
-const TimerSoundSetter = ({ selectedSound, setSelectedSound }) => {
+const BrowserNotificationSettings = ({ selectedSound, setSelectedSound }) => {
 
   useEffect(() => {
     BrowserNotificationHandler.setSelectedSound(selectedSound);
@@ -22,4 +22,4 @@ const TimerSoundSetter = ({ selectedSound, setSelectedSound }) => {
   );
 };
 
-export default TimerSoundSetter;
+export default BrowserNotificationSettings;

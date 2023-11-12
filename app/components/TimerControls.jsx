@@ -1,4 +1,4 @@
-"use client"
+'use client'
 import React from 'react';
 import { FaPlay, FaPause, FaRedo } from 'react-icons/fa';
 

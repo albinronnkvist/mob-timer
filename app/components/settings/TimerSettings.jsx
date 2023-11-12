@@ -1,8 +1,8 @@
-"use client"
+'use client'
 import React, { useState } from 'react';
 import { FaCheck } from 'react-icons/fa';
 
-const TimerSetter = ({ onTimeSet }) => {
+const TimerSettings = ({ onUpdateTime }) => {
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(59);
   const [error, setError] = useState('');
@@ -33,7 +33,7 @@ const TimerSetter = ({ onTimeSet }) => {
     }
 
     const totalSeconds = (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
-    onTimeSet(totalSeconds);
+    onUpdateTime(totalSeconds);
   };
 
   return (
@@ -62,4 +62,4 @@ const TimerSetter = ({ onTimeSet }) => {
   );
 };
 
-export default TimerSetter;
+export default TimerSettings;
